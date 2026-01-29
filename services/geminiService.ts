@@ -14,8 +14,20 @@ const SYSTEM_INSTRUCTIONS: Record<TemplateType, string> = {
 };
 
 export const generateWebsiteCode = async (template: TemplateType, userPrompt: string): Promise<string> => {
-  // Always use the injected process.env.API_KEY
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Attempt to access the API key from the environment. 
+  // We check typeof process to avoid 'ReferenceError: process is not defined' in pure browser environments.
+  const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : undefined;
+  
+  if (!apiKey) {
+    throw new Error(
+      "API_KEY is missing. To fix this:\n" +
+      "1. Ensure you have added 'API_KEY' to your deployment secrets (Vercel/Render/Replit).\n" +
+      "2. If the error persists on a live domain, your hosting provider may not be passing 'process.env' variables to the browser automatically."
+    );
+  }
+
+  // Initialize the Gemini AI client
+  const ai = new GoogleGenAI({ apiKey });
   
   const prompt = `
     Create a fully functional, responsive single-page HTML website for a ${template} template.
@@ -26,7 +38,7 @@ export const generateWebsiteCode = async (template: TemplateType, userPrompt: st
     - All JS in <script> tags, all CSS in <style> or Tailwind.
     - Template instructions: ${SYSTEM_INSTRUCTIONS[template]}
     
-    IMPORTANT: Provide ONLY the raw HTML code. Do NOT wrap it in markdown. Start directly with <!DOCTYPE html>.
+    IMPORTANT: Provide ONLY the raw HTML code. Do NOT wrap it in markdown code blocks. Start directly with <!DOCTYPE html>.
   `;
 
   try {
@@ -39,12 +51,19 @@ export const generateWebsiteCode = async (template: TemplateType, userPrompt: st
     });
 
     let text = response.text || '';
+    
+    // Safety check: if model still returns markdown code blocks, strip them
     if (text.includes('```')) {
       text = text.replace(/```html/g, '').replace(/```/g, '').trim();
     }
+    
     return text;
   } catch (error: any) {
     console.error("Gemini API Error:", error);
-    throw new Error(error.message || "API Connection failed. Ensure API_KEY is correctly set in your hosting environment variables.");
+    // Provide a user-friendly message for common API errors
+    if (error.message?.includes('API key not valid')) {
+      throw new Error("The provided API key is invalid. Please check your Google AI Studio dashboard.");
+    }
+    throw new Error(error.message || "An unexpected error occurred while generating the website.");
   }
 };
