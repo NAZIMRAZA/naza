@@ -14,7 +14,7 @@ const SYSTEM_INSTRUCTIONS: Record<TemplateType, string> = {
 };
 
 export const generateWebsiteCode = async (template: TemplateType, userPrompt: string): Promise<string> => {
-  // Use gemini-3-flash-preview as recommended for basic tasks
+  // Always use the injected process.env.API_KEY
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const prompt = `
@@ -22,33 +22,26 @@ export const generateWebsiteCode = async (template: TemplateType, userPrompt: st
     User specifics: "${userPrompt}"
     Requirements:
     - Use Tailwind CSS via CDN link in the head (<script src="https://cdn.tailwindcss.com"></script>).
-    - Use Google Fonts (Inter or similar).
-    - Fully Responsive/Mobile-friendly.
+    - Fully Responsive.
     - All JS in <script> tags, all CSS in <style> or Tailwind.
-    - Template specific instructions: ${SYSTEM_INSTRUCTIONS[template]}
+    - Template instructions: ${SYSTEM_INSTRUCTIONS[template]}
     
-    IMPORTANT: Provide ONLY the raw HTML code. Do NOT wrap it in markdown code blocks like \`\`\`html. Start directly with <!DOCTYPE html>.
+    IMPORTANT: Provide ONLY the raw HTML code. Do NOT wrap it in markdown. Start directly with <!DOCTYPE html>.
   `;
 
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: [{ parts: [{ text: prompt }] }],
-      config: {
-        temperature: 0.7,
-      },
     });
 
     let text = response.text || '';
-    
-    // Safety check: if model still returns markdown, strip it
     if (text.includes('```')) {
       text = text.replace(/```html/g, '').replace(/```/g, '').trim();
     }
-    
     return text;
   } catch (error: any) {
     console.error("Gemini API Error:", error);
-    throw new Error(error.message || "Failed to generate website. Ensure your API_KEY is set in environment variables.");
+    throw new Error(error.message || "API Connection failed. Ensure API_KEY is correctly set in your hosting environment variables.");
   }
 };
