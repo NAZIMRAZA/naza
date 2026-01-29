@@ -13,16 +13,15 @@ const SYSTEM_INSTRUCTIONS: Record<TemplateType, string> = {
   [TemplateType.CHAT]: `Generate a functional chat interface inspired by Instagram/WhatsApp. Include: Sidebar with 'Friend IDs', a main chat window with message bubbles, and a functional-looking input area. Use JS to make the chat feel interactive (adding bubbles when 'sending'). Include a 'Verify User' splash screen.`
 };
 
-export const generateWebsiteCode = async (template: TemplateType, userPrompt: string): Promise<string> => {
-  // Attempt to access the API key from the environment. 
-  // We check typeof process to avoid 'ReferenceError: process is not defined' in pure browser environments.
-  const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : undefined;
+export const generateWebsiteCode = async (template: TemplateType, userPrompt: string, customApiKey?: string): Promise<string> => {
+  // Try custom key first, then localStorage, then process.env
+  const storedKey = localStorage.getItem('NAZCRAFT_USER_API_KEY');
+  const envKey = typeof process !== 'undefined' ? process.env.API_KEY : undefined;
+  const apiKey = customApiKey || storedKey || envKey;
   
   if (!apiKey) {
     throw new Error(
-      "API_KEY is missing. To fix this:\n" +
-      "1. Ensure you have added 'API_KEY' to your deployment secrets (Vercel/Render/Replit).\n" +
-      "2. If the error persists on a live domain, your hosting provider may not be passing 'process.env' variables to the browser automatically."
+      "Missing API Key. Please click the 'Settings' icon to enter your Gemini API Key manually."
     );
   }
 
@@ -52,7 +51,6 @@ export const generateWebsiteCode = async (template: TemplateType, userPrompt: st
 
     let text = response.text || '';
     
-    // Safety check: if model still returns markdown code blocks, strip them
     if (text.includes('```')) {
       text = text.replace(/```html/g, '').replace(/```/g, '').trim();
     }
@@ -60,9 +58,8 @@ export const generateWebsiteCode = async (template: TemplateType, userPrompt: st
     return text;
   } catch (error: any) {
     console.error("Gemini API Error:", error);
-    // Provide a user-friendly message for common API errors
-    if (error.message?.includes('API key not valid')) {
-      throw new Error("The provided API key is invalid. Please check your Google AI Studio dashboard.");
+    if (error.message?.includes('API key not valid') || error.message?.includes('403')) {
+      throw new Error("Invalid API Key. Please verify your key in the settings.");
     }
     throw new Error(error.message || "An unexpected error occurred while generating the website.");
   }
