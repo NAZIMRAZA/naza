@@ -7,9 +7,9 @@ import About from './pages/About';
 import Service from './pages/Service';
 import Auth from './pages/Auth';
 import Admin from './pages/Admin';
+import Contact from './pages/Contact';
 import { LayoutDashboard, Info, Briefcase, Mail, UserCircle, LogOut, ShieldCheck } from 'lucide-react';
 
-// Mock Auth Context Replacement
 const App: React.FC = () => {
   const [authState, setAuthState] = useState<AuthState>(() => {
     const saved = localStorage.getItem('nazcraft_auth');
@@ -92,7 +92,7 @@ const App: React.FC = () => {
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
             <Route path="/service" element={<Service isAuthenticated={authState.isAuthenticated} />} />
-            <Route path="/contact" element={<ContactPlaceholder />} />
+            <Route path="/contact" element={<Contact />} />
             <Route path="/auth" element={<Auth setAuthState={setAuthState} setAllUsers={setAllUsers} />} />
             <Route path="/admin" element={authState.isAdmin ? <Admin users={allUsers} /> : <Navigate to="/" />} />
           </Routes>
@@ -132,31 +132,5 @@ const App: React.FC = () => {
     </HashRouter>
   );
 };
-
-const ContactPlaceholder = () => (
-  <div className="max-w-3xl mx-auto py-20 px-4 text-center">
-    <h1 className="text-4xl font-bold mb-6">Contact Us</h1>
-    <p className="text-gray-600 mb-8">Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.</p>
-    <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
-      <form className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Name</label>
-            <input type="text" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
-            <input type="email" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" />
-          </div>
-        </div>
-        <div className="text-left">
-          <label className="block text-sm font-medium text-gray-700">Message</label>
-          <textarea rows={4} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border"></textarea>
-        </div>
-        <button type="button" className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition-all">Send Message</button>
-      </form>
-    </div>
-  </div>
-);
 
 export default App;
