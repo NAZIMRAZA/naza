@@ -1,8 +1,7 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { TemplateType } from '../types';
 import { generateWebsiteCode } from '../services/geminiService';
-import { Wand2, Layout, Download, Eye, Loader2, X, AlertCircle, Key, CheckCircle } from 'lucide-react';
+import { Wand2, Layout, Download, Eye, Loader2, X, AlertCircle, Sparkles } from 'lucide-react';
 
 interface ServiceProps {
   isAuthenticated: boolean;
@@ -15,40 +14,6 @@ const Service: React.FC<ServiceProps> = ({ isAuthenticated }) => {
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasKey, setHasKey] = useState<boolean>(false);
-
-  useEffect(() => {
-    const checkKeyStatus = async () => {
-      // @ts-ignore
-      if (window.aistudio?.hasSelectedApiKey) {
-        try {
-          // @ts-ignore
-          const connected = await window.aistudio.hasSelectedApiKey();
-          setHasKey(connected);
-        } catch (e) {
-          console.debug("Bridge check failed", e);
-        }
-      } else if (process.env.API_KEY) {
-        setHasKey(true);
-      }
-    };
-    checkKeyStatus();
-  }, []);
-
-  const handleConnectKey = async () => {
-    // @ts-ignore
-    if (window.aistudio?.openSelectKey) {
-      try {
-        // @ts-ignore
-        await window.aistudio.openSelectKey();
-        setHasKey(true); // Assume success per system instructions
-      } catch (e) {
-        console.error("Key selection failed", e);
-      }
-    } else {
-      alert("API Key selection is not available in this environment. Please ensure API_KEY is set in your environment variables.");
-    }
-  };
 
   const templates = [
     { id: TemplateType.BUSINESS, name: 'Business Website', desc: 'Corporate & professional.', icon: '🏢' },
@@ -59,10 +24,18 @@ const Service: React.FC<ServiceProps> = ({ isAuthenticated }) => {
   ];
 
   const handleGenerate = async () => {
-    if (!isAuthenticated) return alert('Please sign in first.');
-    if (!selectedTemplate) return alert('Please select a template.');
-    if (!prompt.trim()) return alert('Please describe your website.');
-    if (!hasKey && !process.env.API_KEY) return alert('Please connect your Gemini API Key first.');
+    if (!isAuthenticated) {
+      setError('Please sign in or create an account to use the generator.');
+      return;
+    }
+    if (!selectedTemplate) {
+      setError('Please select a template first.');
+      return;
+    }
+    if (!prompt.trim()) {
+      setError('Please provide a description for your website.');
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
@@ -70,8 +43,7 @@ const Service: React.FC<ServiceProps> = ({ isAuthenticated }) => {
       const code = await generateWebsiteCode(selectedTemplate, prompt);
       setGeneratedCode(code);
     } catch (err: any) {
-      setError(err.message);
-      if (err.message.includes("Key")) setHasKey(false);
+      setError(err.message || 'An unexpected error occurred during generation.');
     } finally {
       setIsLoading(false);
     }
@@ -83,101 +55,137 @@ const Service: React.FC<ServiceProps> = ({ isAuthenticated }) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `nazcraft-${selectedTemplate}.html`;
+    a.download = `nazcraft-${selectedTemplate}-${Date.now()}.html`;
     a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-12">
-      <div className="text-center mb-10">
-        <h1 className="text-4xl font-extrabold text-gray-900 mb-2">Website Generator</h1>
-        <p className="text-gray-500">Transform your ideas into reality with AI.</p>
-
-        {/* API Connection Button */}
-        <div className="mt-6">
-          <button
-            onClick={handleConnectKey}
-            disabled={hasKey}
-            className={`inline-flex items-center space-x-2 px-6 py-2.5 rounded-full font-bold transition-all border shadow-sm ${
-              hasKey 
-                ? 'bg-green-50 text-green-700 border-green-200 cursor-default' 
-                : 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700 active:scale-95'
-            }`}
-          >
-            {hasKey ? <CheckCircle size={18} /> : <Key size={18} />}
-            <span>{hasKey ? 'Gemini AI Connected' : 'Connect Gemini API Key'}</span>
-          </button>
-          {!hasKey && (
-            <p className="text-xs text-red-500 mt-2 font-medium">
-              Note: You must connect your key before generating.
-            </p>
-          )}
+      <div className="text-center mb-12">
+        <div className="inline-flex items-center px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-sm font-bold mb-4">
+          <Sparkles size={14} className="mr-2" />
+          Nazcraft AI Engine v2.0
         </div>
+        <h1 className="text-4xl font-extrabold text-gray-900 mb-2">Create Your Website</h1>
+        <p className="text-gray-500 max-w-xl mx-auto">Select a blueprint, describe your vision, and let our AI assemble your professional digital home.</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
         {templates.map((t) => (
           <button
             key={t.id}
-            onClick={() => setSelectedTemplate(t.id)}
-            className={`p-5 rounded-2xl border-2 transition-all text-left ${
-              selectedTemplate === t.id ? 'border-indigo-600 bg-indigo-50 shadow-md' : 'border-gray-100 bg-white hover:border-indigo-200'
+            onClick={() => {
+              setSelectedTemplate(t.id);
+              setError(null);
+            }}
+            className={`p-6 rounded-2xl border-2 transition-all text-left flex flex-col items-center md:items-start ${
+              selectedTemplate === t.id 
+                ? 'border-indigo-600 bg-indigo-50 shadow-md transform scale-105' 
+                : 'border-gray-100 bg-white hover:border-indigo-200 hover:shadow-sm'
             }`}
           >
-            <div className="text-3xl mb-2">{t.icon}</div>
-            <h3 className="font-bold text-sm">{t.name}</h3>
+            <div className="text-4xl mb-3">{t.icon}</div>
+            <h3 className="font-bold text-sm text-gray-900">{t.name}</h3>
+            <p className="text-[10px] text-gray-400 mt-1 hidden md:block">{t.desc}</p>
           </button>
         ))}
       </div>
 
-      <div className="bg-white rounded-3xl shadow-xl p-6 border border-gray-100">
-        <textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Describe your dream website here..."
-          className="w-full h-32 p-4 bg-gray-50 border-gray-200 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none resize-none mb-6"
-        />
-        
-        <div className="flex flex-col sm:flex-row gap-4">
-          <button
-            onClick={handleGenerate}
-            disabled={isLoading || !isAuthenticated}
-            className="flex-1 bg-indigo-600 text-white py-4 rounded-xl font-bold flex items-center justify-center space-x-2 hover:bg-indigo-700 disabled:opacity-50 transition-all"
-          >
-            {isLoading ? <Loader2 className="animate-spin" /> : <Wand2 size={20} />}
-            <span>{isLoading ? 'Building...' : 'Generate Website'}</span>
-          </button>
+      <div className="bg-white rounded-[2.5rem] shadow-2xl p-8 border border-gray-100 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-full -mr-32 -mt-32 blur-3xl opacity-50 pointer-events-none"></div>
 
-          {generatedCode && (
-            <div className="flex gap-2">
-              <button onClick={() => setShowPreview(true)} className="px-6 py-4 bg-gray-100 text-gray-700 rounded-xl font-bold flex items-center space-x-2 hover:bg-gray-200">
-                <Eye size={20} /> <span>View</span>
-              </button>
-              <button onClick={handleDownload} className="px-6 py-4 bg-green-600 text-white rounded-xl font-bold flex items-center space-x-2 hover:bg-green-700">
-                <Download size={20} /> <span>Save</span>
-              </button>
-            </div>
-          )}
+        <div className="relative z-10">
+          <label className="block text-xs font-black text-indigo-600 mb-3 uppercase tracking-widest">Instruction Manual</label>
+          <textarea
+            value={prompt}
+            onChange={(e) => {
+              setPrompt(e.target.value);
+              if (error) setError(null);
+            }}
+            placeholder="Tell us everything... 'A luxury watches boutique with a gold and black theme, including a collection gallery and a contact form.'"
+            className="w-full h-40 p-5 bg-gray-50 border-gray-100 border-2 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none resize-none mb-8 transition-all text-lg"
+          />
+          
+          <div className="flex flex-col sm:flex-row gap-4">
+            <button
+              onClick={handleGenerate}
+              disabled={isLoading || !isAuthenticated}
+              className={`flex-1 bg-indigo-600 text-white py-5 rounded-2xl font-black text-lg flex items-center justify-center space-x-3 hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-xl shadow-indigo-200 ${isLoading ? 'cursor-not-allowed' : 'active:scale-95'}`}
+            >
+              {isLoading ? <Loader2 className="animate-spin" size={24} /> : <Wand2 size={24} />}
+              <span>{isLoading ? 'Assembling Components...' : 'Generate My Website'}</span>
+            </button>
+
+            {generatedCode && !isLoading && (
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowPreview(true)} 
+                  className="px-8 py-5 bg-gray-900 text-white rounded-2xl font-bold flex items-center space-x-2 hover:bg-black transition-all shadow-lg active:scale-95"
+                >
+                  <Eye size={20} /> <span>Preview</span>
+                </button>
+                <button 
+                  onClick={handleDownload} 
+                  className="px-8 py-5 bg-emerald-500 text-white rounded-2xl font-bold flex items-center space-x-2 hover:bg-emerald-600 transition-all shadow-lg active:scale-95"
+                >
+                  <Download size={20} /> <span>Download</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {error && (
-        <div className="mt-4 p-4 bg-red-50 text-red-600 rounded-xl flex items-center space-x-2 border border-red-100">
-          <AlertCircle size={20} />
-          <span className="text-sm font-medium">{error}</span>
+        <div className="mt-8 p-5 bg-red-50 text-red-700 rounded-2xl flex items-center space-x-4 border border-red-100 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="p-2 bg-red-100 rounded-full">
+            <AlertCircle size={20} />
+          </div>
+          <p className="font-semibold">{error}</p>
+        </div>
+      )}
+
+      {!isAuthenticated && !isLoading && (
+        <div className="mt-10 p-6 bg-gradient-to-r from-amber-50 to-orange-50 text-amber-800 rounded-3xl text-center border border-amber-100 shadow-inner">
+          <p className="font-medium">Account required! <span className="underline font-bold cursor-pointer">Sign in</span> to access the Nazcraft AI generator.</p>
         </div>
       )}
 
       {showPreview && generatedCode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-white w-full h-full max-w-6xl rounded-2xl flex flex-col overflow-hidden">
-            <div className="p-4 border-b flex justify-between items-center bg-gray-50">
-              <span className="font-bold">Website Preview</span>
-              <button onClick={() => setShowPreview(false)} className="p-2 hover:bg-gray-200 rounded-full">
-                <X size={24} />
-              </button>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/95 backdrop-blur-md p-4 sm:p-8">
+          <div className="bg-white w-full h-full max-w-7xl rounded-[2rem] flex flex-col overflow-hidden shadow-2xl">
+            <div className="p-5 border-b flex justify-between items-center bg-gray-50">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold">N</div>
+                <div>
+                  <h3 className="font-bold text-gray-900">Live Preview</h3>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Template: {selectedTemplate}</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-4">
+                <button 
+                  onClick={handleDownload}
+                  className="hidden sm:flex items-center space-x-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-lg font-bold text-sm hover:bg-emerald-100 transition-colors"
+                >
+                  <Download size={16} /> <span>Save Result</span>
+                </button>
+                <button 
+                  onClick={() => setShowPreview(false)} 
+                  className="p-3 hover:bg-gray-200 rounded-full transition-all text-gray-500 hover:text-gray-900"
+                >
+                  <X size={28} />
+                </button>
+              </div>
             </div>
-            <iframe srcDoc={generatedCode} className="flex-grow w-full border-none" />
+            <div className="flex-grow w-full bg-white relative">
+               <iframe 
+                srcDoc={generatedCode} 
+                className="w-full h-full border-none" 
+                title="AI Generated Website Preview"
+                sandbox="allow-scripts"
+              />
+            </div>
           </div>
         </div>
       )}
