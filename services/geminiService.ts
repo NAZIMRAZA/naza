@@ -33,6 +33,9 @@ export const generateWebsiteCode = async (template: TemplateType, userPrompt: st
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: [{ parts: [{ text: prompt }] }],
+      config: {
+        temperature: 0.7,
+      }
     });
 
     let text = response.text || '';

@@ -1,8 +1,5 @@
 {
   "name": "Nazcraft by Nazcorp",
   "description": "A high-end website building platform that generates custom web templates (Business, Crypto, E-commerce, etc.) based on user prompts using Gemini AI.",
-  "requestFramePermissions": [
-    "camera",
-    "microphone"
-  ]
+  "requestFramePermissions": []
 }
